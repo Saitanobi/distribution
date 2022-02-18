@@ -38,22 +38,22 @@ contract EthDistribute is Ownable {
         require(marketingSent && devSent && treasurySent, "Send failed");
     }
 
-    function setMarketingWallet(address payable account) external {
+    function setMarketingWallet(address payable account) external onlyOwner {
         require(account != address(0), "Cannot be 0 address");
         _marketingWallet = account;
     }
 
-    function setDevWallet(address payable account) external {
+    function setDevWallet(address payable account) external onlyOwner {
         require(account != address(0), "Cannot be 0 address");
         _devWallet = account;
     }
 
-    function setTreasuryWallet(address payable account) external {
+    function setTreasuryWallet(address payable account) external onlyOwner {
         require(account != address(0), "Cannot be 0 address");
         _treasuryWallet = account;
     }
 
-    function setNewShares(uint256 marketingShare, uint256 devShare, uint256 treasuryShare) external {
+    function setNewShares(uint256 marketingShare, uint256 devShare, uint256 treasuryShare) external onlyOwner {
         require(
             marketingShare.add(devShare).add(treasuryShare) == 100, "Does not add up to 100"
         );
