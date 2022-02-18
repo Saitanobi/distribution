@@ -1,19 +1,47 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
-describe("Greeter", function () {
-  it("Should return the new greeting once it's changed", async function () {
-    const Greeter = await ethers.getContractFactory("Greeter");
-    const greeter = await Greeter.deploy("Hello, world!");
-    await greeter.deployed();
+const MKTNG = "0x65271eFDBcE385D61013aCaA6165c4cd150300aC";
+const DEV = "0x33ED1431AE820e6A5eB8dfC93510ee62e7873456";
+const TRSRY = "0x8e5bDe5A981339ccB7518010dEaF69AFe4Ae1c87";
 
-    expect(await greeter.greet()).to.equal("Hello, world!");
+describe("Distribution Contract", function () {
+  it("Should deposit and distribute ETH", async function () {
 
-    const setGreetingTx = await greeter.setGreeting("Hola, mundo!");
+    const signers = await ethers.getSigners();
+    // We get the contract to deploy
+    const Dist = await ethers.getContractFactory("EthDistribute");
+    const dist = await Dist.deploy(MKTNG, DEV, TRSRY);
 
-    // wait until the transaction is mined
-    await setGreetingTx.wait();
+    await dist.deployed();
 
-    expect(await greeter.greet()).to.equal("Hola, mundo!");
+    await (await signers[1].sendTransaction({ to: dist.address, value: ethers.utils.parseEther('10.0') })).wait();
+
+    // Check contract has 10 ETH in it
+    expect(await ethers.provider.getBalance(dist.address)).to.equal(ethers.utils.parseEther('10.0'));
+
+    // Get prior address balances
+    const priorMktngBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(MKTNG)));
+    const priorDevBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(DEV)));
+    const priorTrsryBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(TRSRY)));
+
+    await (await dist.connect(signers[0]).claim()).wait();
+
+    // Get address balances after distribution
+    const newMktngBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(MKTNG)));
+    const newDevBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(DEV)));
+    const newTrsryBalance = Number(ethers.utils.formatEther(await ethers.provider.getBalance(TRSRY)));    
+
+    // Check marketing address received 40% of 10 ETH (4 ETH)
+    expect(newMktngBalance).to.equal(priorMktngBalance + 4);
+
+    // Check dev address received 10% of 10 ETH (1 ETH)
+    expect(newDevBalance).to.equal(priorDevBalance + 1);
+
+    // Check Treasury address received 50% of 10 ETH (5 ETH)
+    expect(newTrsryBalance).to.equal(priorTrsryBalance + 5);
+
+    // Check contract has nothing left
+    expect(await ethers.provider.getBalance(dist.address)).to.equal('0');
   });
 });
